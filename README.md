@@ -1,56 +1,66 @@
 # **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
-
-Overview
 ---
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
+**Finding Lane Lines on the Road**
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
-
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
-
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
+The goals / steps of this project are the following:
+* Make a pipeline that finds lane lines on the road images
+* Apply the pipeline to video and track the lane lines
 
 
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
+[//]: # (Image References)
 
-1. Describe the pipeline
+[image1]: ./examples/grayscale.jpg "Grayscale"
+[image2]: ./test_images_output/solidWhiteCurve.jpg "Image1"
 
-2. Identify any shortcomings
-
-3. Suggest possible improvements
-
-We encourage using images in your writeup to demonstrate how your pipeline works.  
-
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
-
-
-The Project
 ---
 
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
+### Reflection
 
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) if you haven't already.
+### 1. Pipeline Description
 
-**Step 2:** Open the code in a Jupyter Notebook
+My pipeline consisted of 5 steps.
 
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out [Udacity's free course on Anaconda and Jupyter Notebooks](https://classroom.udacity.com/courses/ud1111) to get started.
+1. Convert to Grayscale
 
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
+   Converting to grayscale is done using cv2.cvtColor(img, cv2.COLOR_RGB2GRAY) function. By converting to grayscale, it facilitate image processing process.
+   
+   ![alt text][image1]
 
-`> jupyter notebook`
+2. Apply Canny Edges
 
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
+    Identifying the edges is done using cv2.Canny(img, low_threshold, high_threshold) function to find all the edges in the images. The edges is the area where the gradient is significant.
 
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
+3. Add Gaussian Blur
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+    Adding Gaussian Blur using cv2.GaussianBlur(img, (kernel_size, kernel_size), 0) remove all the small noise and error that could occur when trying to identify the line.
 
+4. Draw Hough Line in the Region of Interest
+
+    For this part of the pipeline, there are two helper functions involve. The first one is for identifying the line in Hough Space by using cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len, maxLineGap=max_line_gap) function. The output of the function give the list of two points which form the lines. The parameter of the hough line are number of threashold which tell minimum voting needed, the minimum line length, and hte max line gap. These parameters are tune to best identify the line.
+
+    The second helper function is for drawing line. This is done originally with cv2.line(img, (x1, y1), (x2, y2), color, thickness). Later on, to take into account possiblity of very curve road by implementing polynomial regression. First, I group the point in the left and right lane by using the slope of the lines. After that, I use numpy polyfit and poly1d function to find the polynomial regression function. Then I can find the points using that function, and draw the line connecting each points with cv2.polylines. After experimenting, I decided to use polynomial of degree 1 (which is linear regression) because it is the most robust and provide most accurate result.
+
+5. Combine the Line Image with Original Image
+
+   Lastly, using the cv2.addWeighted(initial_img, α, img, β, γ), I combine the two image.
+
+The resulting images are shown below:
+
+![Image after Pipeline][image2]
+
+
+### 2. Potential Shortcomings
+
+
+One potential shortcoming would be what would happen when the line have high curvature. Currently my code is using linear regression. If the curve of the road is too high, linear result would be inaccurate.
+
+Another shortcoming could be when the marking on the road spread out too far or it disaapear when marking fade too much. This would make the program to lose track of the road.
+
+
+### 3. Possible Improvements
+
+A possible improvement would be to incorporate the previous result. Therefore, whenever the car is in the region where the marking fade at certain region, it would use the previous data to predict where the lane is. This would require some probabilistic robotics technique.
+
+Another potential improvement could be to tune the polynomial function to find the one that best fit the data when the curvature is really high.
