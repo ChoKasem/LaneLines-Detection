@@ -25,6 +25,7 @@ My pipeline consisted of 5 steps.
 1. Convert to Grayscale
 
    Converting to grayscale is done using cv2.cvtColor(img, cv2.COLOR_RGB2GRAY) function. By converting to grayscale, it facilitate image processing process.
+   
    ![alt text][image1]
 
 2. Apply Canny Edges
